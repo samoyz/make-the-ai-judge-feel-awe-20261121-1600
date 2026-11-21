@@ -12,7 +12,7 @@
 // Outside the grader's container, MAKEFUN_OUTPUT_DIR stands in for /output:
 //   mkdir -p out && MAKEFUN_OUTPUT_DIR=out node main.ts
 
-import { mkdirSync, writeFileSync } from 'node:fs';
+import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 
 // The entry text: 213 characters, plain words, one image that grows.
@@ -25,5 +25,20 @@ const ENTRY_TEXT =
 const OUTPUT_DIR = process.env.MAKEFUN_OUTPUT_DIR ?? '/output';
 
 mkdirSync(OUTPUT_DIR, { recursive: true });
-writeFileSync(join(OUTPUT_DIR, 'entry.txt'), ENTRY_TEXT, 'utf8');
-console.log(`Wrote ${ENTRY_TEXT.length} characters to ${join(OUTPUT_DIR, 'entry.txt')}`);
+const outPath = join(OUTPUT_DIR, 'entry.txt');
+writeFileSync(outPath, ENTRY_TEXT, 'utf8');
+
+// Round-trip validation: read the file back and check it against the
+// bounty gate (1-280 Unicode code points, not only whitespace). Counting
+// code points, not UTF-16 units, so the check matches the gate exactly.
+const written = readFileSync(outPath, 'utf8');
+const count = [...written].length;
+if (count < 1 || count > 280) {
+  console.error(`entry.txt has ${count} characters, outside the 1-280 range`);
+  process.exit(1);
+}
+if (written.trim().length === 0) {
+  console.error('entry.txt is only whitespace');
+  process.exit(1);
+}
+console.log(`Wrote ${count} characters to ${outPath}`);
